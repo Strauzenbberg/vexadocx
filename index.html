@@ -3,91 +3,104 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VEXA // PDF to DOCX Elite</title>
+    <title>VEXA // DOCX Precision Elite</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
     <script src="https://unpkg.com/docx@8.2.2/build/index.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
     <style>
         :root { 
             --primary: #007AFF; 
-            --bg: #0a0a0b; 
+            --primary-glow: rgba(0, 122, 255, 0.4);
+            --whatsapp: #25D366;
+            --bg: #050505; 
             --card: #121214; 
-            --border: #1c1c1e;
             --text: #ffffff; 
             --text-dim: #8e8e93;
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
+        
         body { 
-            background: var(--bg); color: var(--text); 
-            font-family: -apple-system, system-ui, sans-serif; 
-            display: flex; flex-direction: column; align-items: center; min-height: 100vh; padding: 40px 20px;
+            background: var(--bg); 
+            background-image: radial-gradient(circle at top center, #1a1a1f 0%, #050505 100%);
+            color: var(--text); 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+            display: flex; flex-direction: column; align-items: center; min-height: 100vh; padding: 60px 20px; 
         }
 
         header { text-align: center; margin-bottom: 40px; }
-        h1 { font-size: 48px; font-weight: 700; letter-spacing: -2px; }
-        .sub-header { color: var(--text-dim); font-size: 14px; margin: 10px auto; }
+        h1 { font-size: 56px; font-weight: 800; letter-spacing: -3px; margin-bottom: 8px; background: linear-gradient(to bottom, #fff, #888); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .sub-header { color: var(--text-dim); font-size: 14px; text-transform: uppercase; letter-spacing: 2px; }
 
-        .upload-section { width: 100%; max-width: 400px; display: flex; flex-direction: column; gap: 16px; }
-
-        .drop-zone {
-            background: var(--card); border: 1px dashed #2c2c2e; border-radius: 24px;
-            padding: 45px 20px; text-align: center; cursor: pointer; transition: 0.3s;
-        }
-        .drop-zone.active { border-color: var(--primary); background: rgba(0, 122, 255, 0.05); }
-
-        .btn {
-            display: flex; align-items: center; justify-content: center;
-            width: 100%; padding: 18px; border-radius: 16px; font-weight: 700;
-            border: none; cursor: pointer; transition: 0.2s;
+        .upload-card { 
+            background: var(--card); border: 1px solid #2c2c2e; border-radius: 28px; padding: 32px; 
+            width: 100%; max-width: 420px; box-shadow: 0 20px 40px rgba(0,0,0,0.4);
         }
 
-        #btn-run { background: #fff; color: #000; margin-top: 10px; }
-        #btn-run:disabled { background: #1c1c1e; color: #555; cursor: not-allowed; }
+        .drop-zone { 
+            border: 2px dashed #2c2c2e; border-radius: 20px; padding: 40px 20px; text-align: center; 
+            cursor: pointer; transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1); margin-bottom: 20px;
+        }
+        .drop-zone:hover { border-color: var(--primary); box-shadow: 0 0 20px var(--primary-glow); }
+        .drop-zone h3 { font-size: 18px; margin-bottom: 8px; }
 
-        #log {
-            width: 100%; max-width: 400px; font-family: monospace; font-size: 11px;
-            color: #00ff00; background: #000; padding: 15px; border-radius: 16px;
-            margin-top: 20px; height: 130px; overflow-y: auto; border: 1px solid var(--border);
+        .btn { 
+            width: 100%; padding: 18px; border-radius: 16px; font-weight: 700; border: none; 
+            cursor: pointer; transition: 0.3s; font-size: 15px; display: flex; align-items: center; justify-content: center;
         }
 
-        .support-card {
-            width: 100%; max-width: 400px; background: var(--card); border-radius: 28px;
-            padding: 30px; text-align: center; margin-top: 20px; border: 1px solid var(--border);
+        #btn-run { background: #fff; color: #000; margin-bottom: 12px; }
+        #btn-run:disabled { background: #1c1c1e; color: #444; cursor: not-allowed; }
+        
+        .btn-pix { background: #1c1c1e; color: #fff; border: 1px solid #2c2c2e; font-size: 13px; }
+
+        #log { 
+            width: 100%; max-width: 420px; font-family: monospace; font-size: 11px; color: #00ff00; 
+            background: #000; padding: 15px; border-radius: 16px; height: 100px; overflow-y: auto; 
+            margin-top: 20px; border: 1px solid #1c1c1e; opacity: 0.8;
         }
-        .btn-pix { background: var(--primary); color: white; margin-top: 15px; }
+
+        .float-wa {
+            position: fixed; bottom: 30px; right: 30px; background-color: var(--whatsapp);
+            color: white; padding: 12px 20px; border-radius: 50px; text-decoration: none;
+            font-weight: 700; box-shadow: 0 10px 25px rgba(37, 211, 102, 0.3); z-index: 999;
+        }
+
         input[type="file"] { display: none; }
+        .processing { animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
     </style>
 </head>
 <body>
 
 <header>
     <h1>VEXA</h1>
-    <p class="sub-header">Conversão Profissional Local.<br>Privacidade Total e Código Limpo.</p>
+    <p class="sub-header">DOCX PRECISION SYSTEM</p>
 </header>
 
-<div class="upload-section">
+<div class="upload-card">
     <div class="drop-zone" id="drop-zone">
-        <h3>ARQUIVOS PDF</h3>
-        <p>Clique ou arraste para converter</p>
+        <h3>Converter para DOCX</h3>
+        <p>Arraste seu PDF aqui ou clique</p>
     </div>
-    <input type="file" id="f-pdf" accept=".pdf" multiple>
-    <button id="btn-run" class="btn">CONVERTER PARA DOCX</button>
-    <div id="log">> Motor VEXA pronto...</div>
+    <input type="file" id="f-main" accept=".pdf" multiple>
+    
+    <button id="btn-run" class="btn">GERAR DOCX EDITÁVEL</button>
+    <button class="btn btn-pix" onclick="copyPix()">APOIE O PROJETO (PIX)</button>
 </div>
 
-<div class="support-card">
-    <h3>Apoie o Projeto</h3>
-    <button class="btn btn-pix" onclick="copyPix()">Copiar Chave PIX</button>
-</div>
+<div id="log">> Sistema pronto para conversão...</div>
+
+<a href="https://api.whatsapp.com/send?text=Converta PDF para DOCX localmente e grátis!" class="float-wa" target="_blank">
+    Compartilhar ferramenta
+</a>
 
 <script>
     const logDiv = document.getElementById('log');
-    const btnRun = document.getElementById('btn-run');
-    const fileInput = document.getElementById('f-pdf');
+    const btn = document.getElementById('btn-run');
+    const fileInput = document.getElementById('f-main');
     const dropZone = document.getElementById('drop-zone');
     
-    // Configuração do Worker do PDF.js
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
 
     const writeLog = (msg) => { 
@@ -96,71 +109,65 @@
     };
 
     dropZone.onclick = () => fileInput.click();
-    
-    fileInput.onchange = () => {
-        if(fileInput.files.length > 0) writeLog(`${fileInput.files.length} PDF(S) CARREGADO(S)`);
-    };
-
-    async function processFile(file) {
-        try {
-            const arrayBuffer = await file.arrayBuffer();
-            const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-            const docSections = [];
-
-            for (let i = 1; i <= pdf.numPages; i++) {
-                writeLog(`EXTRAINDO PÁGINA ${i}...`);
-                const page = await pdf.getPage(i);
-                const textContent = await page.getTextContent();
-                const pageText = textContent.items.map(s => s.str).join(" ");
-
-                // Criando parágrafos para o DOCX
-                docSections.push(
-                    new docx.Paragraph({
-                        children: [new docx.TextRun(pageText)],
-                        spacing: { after: 200 }
-                    })
-                );
-            }
-
-            // Gerando o documento DOCX real
-            const doc = new docx.Document({
-                sections: [{
-                    properties: {},
-                    children: docSections,
-                }],
-            });
-
-            const blob = await docx.Packer.toBlob(doc);
-            saveAs(blob, file.name.replace(".pdf", ".docx"));
-            return true;
-        } catch (error) {
-            console.error(error);
-            return false;
-        }
-    }
-
-    btnRun.onclick = async () => {
-        if (fileInput.files.length === 0) return writeLog("ERRO: NENHUM ARQUIVO");
-        
-        btnRun.disabled = true;
-        btnRun.innerText = "GERANDO DOCX...";
-        
-        for (let file of fileInput.files) {
-            writeLog(`ANALISANDO: ${file.name}`);
-            const success = await processFile(file);
-            if(success) writeLog(`SUCESSO: ${file.name.replace(".pdf", ".docx")}`);
-            else writeLog(`FALHA TÉCNICA NO ARQUIVO: ${file.name}`);
-        }
-
-        writeLog("✨ TAREFAS CONCLUÍDAS!");
-        btnRun.disabled = false;
-        btnRun.innerText = "CONVERTER PARA DOCX";
-    };
 
     function copyPix() {
         navigator.clipboard.writeText("153d672d-9acb-4fc9-90b9-42ad3a097709");
-        writeLog("PIX COPIADO!");
+        writeLog("Chave PIX copiada!");
     }
+
+    // ESTRATÉGIA DE CONVERSÃO REVERSA
+    btn.onclick = async () => {
+        const files = fileInput.files;
+        if (files.length === 0) return alert("Selecione um PDF!");
+
+        btn.disabled = true;
+        btn.classList.add('processing');
+        btn.innerText = "EXTRAINDO TEXTO...";
+
+        for (let file of files) {
+            writeLog(`Lendo binários: ${file.name}`);
+            try {
+                const arrayBuffer = await file.arrayBuffer();
+                const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                const docParagraphs = [];
+
+                for (let i = 1; i <= pdf.numPages; i++) {
+                    const page = await pdf.getPage(i);
+                    const textContent = await page.getTextContent();
+                    
+                    // Estratégia vencedora: Agrupar texto por linhas para manter ordem
+                    const pageText = textContent.items.map(item => item.str).join(" ");
+                    
+                    docParagraphs.push(
+                        new docx.Paragraph({
+                            children: [new docx.TextRun({ text: pageText, size: 24 })],
+                            spacing: { after: 300 }
+                        }),
+                        new docx.Paragraph({ children: [new docx.PageBreak()] }) // Mantém a divisão de páginas
+                    );
+                    writeLog(`Página ${i} reconstruída.`);
+                }
+
+                const doc = new docx.Document({
+                    sections: [{ children: docParagraphs }]
+                });
+
+                const blob = await docx.Packer.toBlob(doc);
+                saveAs(blob, file.name.replace('.pdf', '.docx'));
+                writeLog(`Sucesso: ${file.name}`);
+
+            } catch (error) {
+                console.error(error);
+                writeLog(`Erro crítico em: ${file.name}`);
+            }
+        }
+
+        btn.disabled = false;
+        btn.classList.remove('processing');
+        btn.innerText = "GERAR DOCX EDITÁVEL";
+        writeLog("✨ Processo finalizado com sucesso.");
+    };
 </script>
+
 </body>
 </html>
