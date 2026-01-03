@@ -5,13 +5,10 @@
 <title>VEXA ENTERPRISE — PDF to DOCX</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<!-- PDF.JS -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 
-<!-- DOCX (UMD - OBRIGATÓRIO) -->
 <script src="https://unpkg.com/docx@8.2.2/build/index.umd.js"></script>
 
-<!-- OCR -->
 <script src="https://unpkg.com/tesseract.js@5.0.4/dist/tesseract.min.js"></script>
 
 <style>
@@ -92,9 +89,6 @@ input{display:none}
 
 <div id="log">> Sistema pronto</div>
 
-<!-- =============================
-     COPY PIX — ESTILO WIKIPEDIA
-============================= -->
 <div class="pix-box">
 
 <h3>Apoie o VEXA ❤️</h3>
@@ -207,13 +201,12 @@ document.getElementById("run").onclick = async () => {
 };
 
 function copiarPix(){
-    const input = document.getElementById("pixKey");
-    input.select();
-    document.execCommand("copy");
-
-    const status = document.getElementById("pixStatus");
-    status.style.display = "block";
-    setTimeout(()=>status.style.display="none",3000);
+    const pixKey = "153d672d-9acb-4fc9-90b9-42ad3a097709";
+    navigator.clipboard.writeText(pixKey).then(() => {
+        const status = document.getElementById("pixStatus");
+        status.style.display = "block";
+        setTimeout(() => status.style.display = "none", 3000);
+    });
 }
 </script>
 
