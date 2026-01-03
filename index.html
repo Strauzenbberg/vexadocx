@@ -2,112 +2,210 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<title>VEXA DOCX</title>
-
+<title>VEXA ENTERPRISE — PDF to DOCX</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="VEXA DOCX — Converta PDFs em Word de forma rápida e gratuita.">
 
-<!-- PDF.js -->
-<script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+<!-- PDF.JS -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 
-<!-- DOCX -->
-<script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
+<!-- DOCX (UMD) -->
+<script src="https://unpkg.com/docx@8.2.2/build/index.umd.js"></script>
+
+<!-- OCR -->
+<script src="https://unpkg.com/tesseract.js@5.0.4/dist/tesseract.min.js"></script>
 
 <style>
-body {
-  font-family: Arial, sans-serif;
-  background: #f9fafb;
-  margin: 0;
-  color: #111;
+body{
+    background:#050505;
+    color:#fff;
+    font-family:system-ui;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    padding:50px
+}
+button{
+    padding:16px 22px;
+    border:none;
+    border-radius:14px;
+    font-weight:700;
+    cursor:pointer;
+    margin-top:10px
+}
+input{display:none}
+
+#log{
+    margin-top:20px;
+    width:420px;
+    height:160px;
+    background:#000;
+    color:#00ff9c;
+    font-family:monospace;
+    font-size:12px;
+    padding:14px;
+    overflow:auto
 }
 
-header {
-  background: #111827;
-  color: #fff;
-  padding: 24px;
-  text-align: center;
+/* 🔥 BARRA DE PROGRESSO */
+.progress-wrap{
+    width:420px;
+    margin-top:20px;
+    display:none
 }
-
-main {
-  max-width: 800px;
-  margin: 40px auto;
-  padding: 24px;
-  background: #fff;
-  border-radius: 10px;
-  box-shadow: 0 4px 12px rgba(0,0,0,.08);
+.progress-text{
+    font-size:12px;
+    margin-bottom:6px;
+    color:#8e8e93
 }
-
-button {
-  background: #111827;
-  color: #fff;
-  border: none;
-  padding: 12px 22px;
-  font-size: 14px;
-  border-radius: 6px;
-  cursor: pointer;
+.progress-bar{
+    width:100%;
+    height:12px;
+    background:#1c1c1e;
+    border-radius:10px;
+    overflow:hidden
 }
-
-button:disabled {
-  background: #9ca3af;
-}
-
-#log {
-  background: #000;
-  color: #0f0;
-  padding: 12px;
-  height: 160px;
-  overflow-y: auto;
-  font-size: 12px;
-  margin-top: 20px;
-  border-radius: 6px;
-}
-
-#progressContainer {
-  width: 100%;
-  background: #e5e7eb;
-  border-radius: 6px;
-  margin-top: 15px;
-  display: none;
-}
-
-#progressBar {
-  width: 0%;
-  height: 12px;
-  background: #16a34a;
-  transition: width .3s;
-}
-
-footer {
-  margin-top: 60px;
-  border-top: 1px solid #e5e7eb;
-  padding: 30px;
-  text-align: center;
+.progress-fill{
+    height:100%;
+    width:0%;
+    background:linear-gradient(90deg,#007AFF,#00C6FF);
+    transition:width .3s ease
 }
 </style>
 </head>
 
 <body>
 
-<header>
-  <h1>VEXA DOCX</h1>
-  <p>PDF para Word — rápido, simples e gratuito</p>
-</header>
+<h1>VEXA ENTERPRISE</h1>
 
-<main>
+<button onclick="file.click()">Selecionar PDF</button>
+<input type="file" id="file" accept=".pdf">
 
-<input type="file" id="pdfInput" accept="application/pdf">
-<br><br>
-<button id="startBtn">Converter para DOCX</button>
+<button id="run">Converter Agora</button>
 
-<div id="progressContainer">
-  <div id="progressBar"></div>
+<!-- PROGRESSO -->
+<div class="progress-wrap" id="progressWrap">
+    <div class="progress-text" id="progressText">Aguardando...</div>
+    <div class="progress-bar">
+        <div class="progress-fill" id="progressFill"></div>
+    </div>
 </div>
 
-<div id="log"></div>
+<div id="log">> Sistema pronto</div>
 
-</main>
+<script>
+/* WORKER FIX */
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+"https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
 
-<!-- ===============================
-     COPY PIX — MODELO WIKIPEDIA
-===========
+const log = m => {
+    const el = document.getElementById("log");
+    el.innerHTML += `<div>> ${m}</div>`;
+    el.scrollTop = el.scrollHeight;
+};
+
+/* 🔥 PROGRESS HELPERS */
+const progressWrap = document.getElementById("progressWrap");
+const progressFill = document.getElementById("progressFill");
+const progressText = document.getElementById("progressText");
+
+const updateProgress = (current, total, status="Processando") => {
+    const percent = Math.round((current / total) * 100);
+    progressFill.style.width = percent + "%";
+    progressText.innerText = `${status} (${percent}%)`;
+};
+
+document.getElementById("run").onclick = async () => {
+    const input = document.getElementById("file");
+    if (!input.files[0]) return alert("Selecione um PDF");
+
+    try {
+        progressWrap.style.display = "block";
+        updateProgress(0,1,"Iniciando");
+
+        log("Carregando PDF...");
+        const buffer = await input.files[0].arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
+        log(`PDF com ${pdf.numPages} páginas`);
+
+        const { Document, Packer, Paragraph, TextRun } = window.docx;
+        const paragraphs = [];
+        const totalSteps = pdf.numPages;
+
+        for (let i = 1; i <= pdf.numPages; i++) {
+            updateProgress(i-1, totalSteps, `Página ${i-1}/${totalSteps}`);
+            log(`Página ${i}`);
+
+            const page = await pdf.getPage(i);
+            const text = await page.getTextContent();
+
+            if (text.items.length > 15) {
+                let bufferLine = "";
+                let lastY = null;
+
+                text.items.forEach(it => {
+                    if (lastY && Math.abs(it.transform[5] - lastY) > 12) {
+                        paragraphs.push(new Paragraph({
+                            children:[new TextRun({ text: bufferLine, size:22 })],
+                            spacing:{ after:200 }
+                        }));
+                        bufferLine = "";
+                    }
+                    bufferLine += it.str + " ";
+                    lastY = it.transform[5];
+                });
+
+                if (bufferLine.trim()) {
+                    paragraphs.push(new Paragraph({
+                        children:[new TextRun({ text: bufferLine, size:22 })]
+                    }));
+                }
+            } else {
+                log("OCR ativado");
+                progressText.innerText = `OCR página ${i}/${totalSteps}`;
+
+                const viewport = page.getViewport({ scale: 2 });
+                const canvas = document.createElement("canvas");
+                const ctx = canvas.getContext("2d");
+                canvas.width = viewport.width;
+                canvas.height = viewport.height;
+
+                await page.render({ canvasContext: ctx, viewport }).promise;
+                const ocr = await Tesseract.recognize(canvas, "por");
+
+                ocr.data.paragraphs.forEach(p => {
+                    paragraphs.push(new Paragraph({
+                        children:[new TextRun({ text: p.text, size:22 })],
+                        spacing:{ after:200 }
+                    }));
+                });
+            }
+
+            updateProgress(i, totalSteps, `Processando páginas`);
+        }
+
+        log("Gerando DOCX...");
+        updateProgress(totalSteps, totalSteps, "Finalizando");
+
+        const doc = new Document({ sections:[{ children: paragraphs }] });
+        const blob = await Packer.toBlob(doc);
+
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = input.files[0].name.replace(".pdf",".docx");
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+
+        progressText.innerText = "Concluído ✔";
+        log("Download iniciado com sucesso");
+
+    } catch (err) {
+        console.error(err);
+        log("ERRO: " + err.message);
+        progressText.innerText = "Erro";
+    }
+};
+</script>
+
+</body>
+</html>
