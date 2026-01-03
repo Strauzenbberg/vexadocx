@@ -1,163 +1,115 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VEXA // DOCX Precision Elite</title>
-    <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
-    <script src="https://unpkg.com/docx@8.2.2/build/index.js"></script>
-    <style>
-        :root { 
-            --primary: #007AFF; 
-            --bg: #050505; 
-            --card: #121214; 
-            --text: #ffffff; 
-            --text-dim: #8e8e93;
-        }
+<meta charset="UTF-8">
+<title>VEXA — PDF to DOCX Precision</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        
-        body { 
-            background: var(--bg); 
-            background-image: radial-gradient(circle at top center, #1a1a1f 0%, #050505 100%);
-            color: var(--text); 
-            font-family: -apple-system, system-ui, sans-serif; 
-            display: flex; flex-direction: column; align-items: center; min-height: 100vh; padding: 60px 20px; 
-        }
+<!-- PDF.JS -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 
-        header { text-align: center; margin-bottom: 40px; }
-        h1 { font-size: 56px; font-weight: 800; letter-spacing: -3px; background: linear-gradient(to bottom, #fff, #888); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .sub-header { color: var(--text-dim); font-size: 14px; text-transform: uppercase; letter-spacing: 2px; }
+<!-- DOCX -->
+<script src="https://unpkg.com/docx@8.2.2/build/index.js"></script>
 
-        .upload-card { 
-            background: var(--card); border: 1px solid #2c2c2e; border-radius: 28px; padding: 32px; 
-            width: 100%; max-width: 420px; box-shadow: 0 20px 40px rgba(0,0,0,0.4);
-        }
-
-        .drop-zone { 
-            border: 2px dashed #2c2c2e; border-radius: 20px; padding: 40px 20px; text-align: center; 
-            cursor: pointer; transition: 0.3s; margin-bottom: 20px;
-        }
-        .drop-zone:hover { border-color: var(--primary); background: rgba(0,122,255,0.05); }
-        
-        .btn { 
-            width: 100%; padding: 18px; border-radius: 16px; font-weight: 700; border: none; 
-            cursor: pointer; transition: 0.3s; font-size: 15px; display: flex; align-items: center; justify-content: center;
-        }
-
-        #btn-run { background: #fff; color: #000; margin-bottom: 12px; }
-        #btn-run:disabled { background: #1c1c1e; color: #444; }
-
-        #log { 
-            width: 100%; max-width: 420px; font-family: monospace; font-size: 11px; color: #00ff00; 
-            background: #000; padding: 15px; border-radius: 16px; height: 120px; overflow-y: auto; 
-            margin-top: 20px; border: 1px solid #1c1c1e; line-height: 1.4;
-        }
-
-        input[type="file"] { display: none; }
-    </style>
+<style>
+body {
+    background:#050505;
+    color:#fff;
+    font-family:system-ui;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    padding:60px 20px;
+}
+h1 { font-size:48px; margin-bottom:10px; }
+.card {
+    background:#121214;
+    border-radius:20px;
+    padding:30px;
+    max-width:420px;
+    width:100%;
+}
+button {
+    width:100%;
+    padding:16px;
+    font-weight:700;
+    border:none;
+    border-radius:14px;
+    cursor:pointer;
+}
+#log {
+    margin-top:20px;
+    background:#000;
+    padding:15px;
+    font-size:12px;
+    height:140px;
+    overflow:auto;
+}
+input { display:none; }
+</style>
 </head>
+
 <body>
 
-<header>
-    <h1>VEXA</h1>
-    <p class="sub-header">PDF TO DOCX PRECISION</p>
-</header>
+<h1>VEXA</h1>
+<p>PDF → DOCX Editável</p>
 
-<div class="upload-card">
-    <div class="drop-zone" id="drop-zone">
-        <h3>Selecionar PDF</h3>
-        <p>Clique para enviar os arquivos</p>
-    </div>
-    <input type="file" id="f-main" accept=".pdf" multiple>
-    
-    <button id="btn-run" class="btn">CONVERTER AGORA</button>
+<div class="card">
+    <button onclick="fileInput.click()">Selecionar PDF</button>
+    <input type="file" id="fileInput" accept=".pdf">
+    <br><br>
+    <button id="convertBtn">Converter Agora</button>
 </div>
 
-<div id="log">> Sistema pronto...</div>
+<div id="log">> Sistema pronto</div>
 
 <script>
-    const logDiv = document.getElementById('log');
-    const btn = document.getElementById('btn-run');
-    const fileInput = document.getElementById('f-main');
-    const dropZone = document.getElementById('drop-zone');
-    
-    const writeLog = (msg) => { 
-        logDiv.innerHTML += `<div>> ${msg}</div>`; 
-        logDiv.scrollTop = logDiv.scrollHeight; 
-    };
+const log = msg => {
+    document.getElementById("log").innerHTML += `<div>> ${msg}</div>`;
+};
 
-    dropZone.onclick = () => fileInput.click();
+document.getElementById("convertBtn").onclick = async () => {
+    const file = document.getElementById("fileInput").files[0];
+    if (!file) return alert("Selecione um PDF");
 
-    btn.onclick = async () => {
-        const files = fileInput.files;
-        if (files.length === 0) return alert("Selecione um arquivo.");
+    log("Carregando PDF...");
+    const arrayBuffer = await file.arrayBuffer();
 
-        btn.disabled = true;
-        btn.innerText = "PROCESSANDO...";
-        
-        // Garantindo acesso ao escopo da biblioteca
-        const { Document, Packer, Paragraph, TextRun, PageBreak } = window.docx;
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    log(`PDF com ${pdf.numPages} páginas`);
 
-        for (let file of files) {
-            writeLog(`Iniciando: ${file.name}`);
-            try {
-                // 1. Carregar PDF (ignorando criptografia de visualização)
-                const arrayBuffer = await file.arrayBuffer();
-                const pdfDoc = await PDFLib.PDFDocument.load(arrayBuffer, { ignoreEncryption: true });
-                const pages = pdfDoc.getPages();
-                
-                writeLog(`Documento acessado. Reconstruindo ${pages.length} pág...`);
+    const { Document, Packer, Paragraph, TextRun } = window.docx;
+    const paragraphs = [];
 
-                // 2. Criar estrutura do DOCX
-                const content = [];
-                content.push(new Paragraph({
-                    children: [new TextRun({ text: `CONVERTIDO VIA VEXA: ${file.name}`, bold: true, size: 24 })]
-                }));
+    for (let i = 1; i <= pdf.numPages; i++) {
+        log(`Extraindo página ${i}`);
+        const page = await pdf.getPage(i);
+        const textContent = await page.getTextContent();
 
-                // Adiciona um aviso de edição
-                content.push(new Paragraph({
-                    children: [new TextRun({ text: "Abra este arquivo no Word para finalizar a formatação.", italics: true, size: 20 })],
-                    spacing: { after: 400 }
-                }));
+        let pageText = textContent.items.map(item => item.str).join(" ");
 
-                // Loop para criar as páginas no Word
-                for(let i=0; i < pages.length; i++) {
-                    content.push(new Paragraph({
-                        children: [new TextRun({ text: `--- Conteúdo da Página ${i+1} ---`, color: "999999" })]
-                    }));
-                    // Se houver mais páginas, adiciona quebra de página
-                    if (i < pages.length - 1) {
-                        content.push(new Paragraph({ children: [new PageBreak()] }));
-                    }
-                }
+        paragraphs.push(
+            new Paragraph({
+                children: [ new TextRun({ text: pageText, size: 22 }) ]
+            })
+        );
+    }
 
-                const doc = new Document({
-                    sections: [{ properties: {}, children: content }]
-                });
+    log("Gerando DOCX...");
+    const doc = new Document({
+        sections: [{ children: paragraphs }]
+    });
 
-                // 3. Gerar e baixar
-                const blob = await Packer.toBlob(doc);
-                const url = URL.createObjectURL(blob);
-                const link = document.createElement('a');
-                link.href = url;
-                link.download = file.name.replace(".pdf", ".docx");
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                
-                writeLog(`Sucesso: ${file.name} baixado.`);
+    const blob = await Packer.toBlob(doc);
+    const url = URL.createObjectURL(blob);
 
-            } catch (err) {
-                console.error(err);
-                writeLog(`Erro: ${err.message}`);
-            }
-        }
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = file.name.replace(".pdf", ".docx");
+    a.click();
 
-        btn.disabled = false;
-        btn.innerText = "CONVERTER AGORA";
-        writeLog("✨ Processo finalizado.");
-    };
+    log("Conversão concluída com sucesso");
+};
 </script>
 
 </body>
