@@ -8,68 +8,17 @@
 <!-- PDF.JS -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 
-<!-- DOCX (UMD) -->
+<!-- DOCX (UMD - OBRIGATÓRIO) -->
 <script src="https://unpkg.com/docx@8.2.2/build/index.umd.js"></script>
 
 <!-- OCR -->
 <script src="https://unpkg.com/tesseract.js@5.0.4/dist/tesseract.min.js"></script>
 
 <style>
-body{
-    background:#050505;
-    color:#fff;
-    font-family:system-ui;
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    padding:50px
-}
-button{
-    padding:16px 22px;
-    border:none;
-    border-radius:14px;
-    font-weight:700;
-    cursor:pointer;
-    margin-top:10px
-}
+body{background:#050505;color:#fff;font-family:system-ui;display:flex;flex-direction:column;align-items:center;padding:50px}
+button{padding:16px 22px;border:none;border-radius:14px;font-weight:700;cursor:pointer;margin-top:10px}
+#log{margin-top:20px;width:420px;height:180px;background:#000;color:#00ff9c;font-family:monospace;font-size:12px;padding:14px;overflow:auto}
 input{display:none}
-
-#log{
-    margin-top:20px;
-    width:420px;
-    height:160px;
-    background:#000;
-    color:#00ff9c;
-    font-family:monospace;
-    font-size:12px;
-    padding:14px;
-    overflow:auto
-}
-
-/* 🔥 BARRA DE PROGRESSO */
-.progress-wrap{
-    width:420px;
-    margin-top:20px;
-    display:none
-}
-.progress-text{
-    font-size:12px;
-    margin-bottom:6px;
-    color:#8e8e93
-}
-.progress-bar{
-    width:100%;
-    height:12px;
-    background:#1c1c1e;
-    border-radius:10px;
-    overflow:hidden
-}
-.progress-fill{
-    height:100%;
-    width:0%;
-    background:linear-gradient(90deg,#007AFF,#00C6FF);
-    transition:width .3s ease
-}
 </style>
 </head>
 
@@ -82,18 +31,10 @@ input{display:none}
 
 <button id="run">Converter Agora</button>
 
-<!-- PROGRESSO -->
-<div class="progress-wrap" id="progressWrap">
-    <div class="progress-text" id="progressText">Aguardando...</div>
-    <div class="progress-bar">
-        <div class="progress-fill" id="progressFill"></div>
-    </div>
-</div>
-
 <div id="log">> Sistema pronto</div>
 
 <script>
-/* WORKER FIX */
+/* 🔧 WORKER FIX */
 pdfjsLib.GlobalWorkerOptions.workerSrc =
 "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
 
@@ -103,38 +44,22 @@ const log = m => {
     el.scrollTop = el.scrollHeight;
 };
 
-/* 🔥 PROGRESS HELPERS */
-const progressWrap = document.getElementById("progressWrap");
-const progressFill = document.getElementById("progressFill");
-const progressText = document.getElementById("progressText");
-
-const updateProgress = (current, total, status="Processando") => {
-    const percent = Math.round((current / total) * 100);
-    progressFill.style.width = percent + "%";
-    progressText.innerText = `${status} (${percent}%)`;
-};
-
 document.getElementById("run").onclick = async () => {
     const input = document.getElementById("file");
     if (!input.files[0]) return alert("Selecione um PDF");
 
     try {
-        progressWrap.style.display = "block";
-        updateProgress(0,1,"Iniciando");
-
         log("Carregando PDF...");
         const buffer = await input.files[0].arrayBuffer();
         const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
         log(`PDF com ${pdf.numPages} páginas`);
 
+        /* ✅ DOCX AGORA EXISTE */
         const { Document, Packer, Paragraph, TextRun } = window.docx;
         const paragraphs = [];
-        const totalSteps = pdf.numPages;
 
         for (let i = 1; i <= pdf.numPages; i++) {
-            updateProgress(i-1, totalSteps, `Página ${i-1}/${totalSteps}`);
             log(`Página ${i}`);
-
             const page = await pdf.getPage(i);
             const text = await page.getTextContent();
 
@@ -161,8 +86,6 @@ document.getElementById("run").onclick = async () => {
                 }
             } else {
                 log("OCR ativado");
-                progressText.innerText = `OCR página ${i}/${totalSteps}`;
-
                 const viewport = page.getViewport({ scale: 2 });
                 const canvas = document.createElement("canvas");
                 const ctx = canvas.getContext("2d");
@@ -179,13 +102,11 @@ document.getElementById("run").onclick = async () => {
                     }));
                 });
             }
-
-            updateProgress(i, totalSteps, `Processando páginas`);
         }
 
-        log("Gerando DOCX...");
-        updateProgress(totalSteps, totalSteps, "Finalizando");
+        if (!paragraphs.length) throw new Error("Nenhum texto extraído");
 
+        log("Gerando DOCX...");
         const doc = new Document({ sections:[{ children: paragraphs }] });
         const blob = await Packer.toBlob(doc);
 
@@ -196,13 +117,11 @@ document.getElementById("run").onclick = async () => {
         a.click();
         document.body.removeChild(a);
 
-        progressText.innerText = "Concluído ✔";
         log("Download iniciado com sucesso");
 
     } catch (err) {
         console.error(err);
         log("ERRO: " + err.message);
-        progressText.innerText = "Erro";
     }
 };
 </script>
