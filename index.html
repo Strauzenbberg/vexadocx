@@ -8,8 +8,8 @@
 <!-- PDF.JS -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 
-<!-- DOCX (UMD - OBRIGATÓRIO) -->
-<script src="https://unpkg.com/docx@8.2.2/build/index.umd.js"></script>
+<!-- DOCX -->
+<script src="https://unpkg.com/docx@8.2.2/build/index.js"></script>
 
 <!-- OCR -->
 <script src="https://unpkg.com/tesseract.js@5.0.4/dist/tesseract.min.js"></script>
@@ -34,7 +34,7 @@ input{display:none}
 <div id="log">> Sistema pronto</div>
 
 <script>
-/* 🔧 WORKER FIX */
+/* 🔧 WORKER FIX (ESSENCIAL) */
 pdfjsLib.GlobalWorkerOptions.workerSrc =
 "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
 
@@ -45,43 +45,42 @@ const log = m => {
 };
 
 document.getElementById("run").onclick = async () => {
-    const input = document.getElementById("file");
-    if (!input.files[0]) return alert("Selecione um PDF");
+    const fileInput = document.getElementById("file");
+    if (!fileInput.files[0]) return alert("Selecione um PDF");
 
     try {
         log("Carregando PDF...");
-        const buffer = await input.files[0].arrayBuffer();
+        const buffer = await fileInput.files[0].arrayBuffer();
         const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
         log(`PDF com ${pdf.numPages} páginas`);
 
-        /* ✅ DOCX AGORA EXISTE */
         const { Document, Packer, Paragraph, TextRun } = window.docx;
         const paragraphs = [];
 
         for (let i = 1; i <= pdf.numPages; i++) {
-            log(`Página ${i}`);
+            log(`Página ${i}...`);
             const page = await pdf.getPage(i);
             const text = await page.getTextContent();
 
             if (text.items.length > 15) {
-                let bufferLine = "";
+                let line = "";
                 let lastY = null;
 
                 text.items.forEach(it => {
                     if (lastY && Math.abs(it.transform[5] - lastY) > 12) {
                         paragraphs.push(new Paragraph({
-                            children:[new TextRun({ text: bufferLine, size:22 })],
+                            children:[new TextRun({ text: line, size:22 })],
                             spacing:{ after:200 }
                         }));
-                        bufferLine = "";
+                        line = "";
                     }
-                    bufferLine += it.str + " ";
+                    line += it.str + " ";
                     lastY = it.transform[5];
                 });
 
-                if (bufferLine.trim()) {
+                if (line.trim()) {
                     paragraphs.push(new Paragraph({
-                        children:[new TextRun({ text: bufferLine, size:22 })]
+                        children:[new TextRun({ text: line, size:22 })]
                     }));
                 }
             } else {
@@ -93,8 +92,8 @@ document.getElementById("run").onclick = async () => {
                 canvas.height = viewport.height;
 
                 await page.render({ canvasContext: ctx, viewport }).promise;
-                const ocr = await Tesseract.recognize(canvas, "por");
 
+                const ocr = await Tesseract.recognize(canvas, "por");
                 ocr.data.paragraphs.forEach(p => {
                     paragraphs.push(new Paragraph({
                         children:[new TextRun({ text: p.text, size:22 })],
@@ -112,7 +111,7 @@ document.getElementById("run").onclick = async () => {
 
         const a = document.createElement("a");
         a.href = URL.createObjectURL(blob);
-        a.download = input.files[0].name.replace(".pdf",".docx");
+        a.download = fileInput.files[0].name.replace(".pdf",".docx");
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
