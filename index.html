@@ -1,175 +1,130 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VEXA // PDF to DOCX Ultimate</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
-    <script src="https://unpkg.com/docx@8.2.2/build/index.js"></script>
-    <style>
-        :root { 
-            --primary: #007AFF; 
-            --bg: #050505; 
-            --card: #121214; 
-            --text: #ffffff; 
-            --text-dim: #8e8e93;
-        }
+<meta charset="UTF-8">
+<title>VEXA ENTERPRISE — PDF to DOCX</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-        body { 
-            background: var(--bg); 
-            color: var(--text); 
-            font-family: -apple-system, system-ui, sans-serif; 
-            display: flex; flex-direction: column; align-items: center; min-height: 100vh; padding: 40px; 
-        }
+<!-- PDF.JS -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 
-        .container { width: 100%; max-width: 500px; text-align: center; }
-        
-        h1 { font-size: 64px; font-weight: 900; letter-spacing: -4px; margin-bottom: 10px; background: linear-gradient(#fff, #444); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+<!-- DOCX (UMD - OBRIGATÓRIO) -->
+<script src="https://unpkg.com/docx@8.2.2/build/index.umd.js"></script>
 
-        .upload-area { 
-            background: var(--card); border: 1px solid #2c2c2e; border-radius: 32px; padding: 40px;
-            box-shadow: 0 30px 60px rgba(0,0,0,0.5); margin-top: 20px;
-        }
+<!-- OCR -->
+<script src="https://unpkg.com/tesseract.js@5.0.4/dist/tesseract.min.js"></script>
 
-        .drop-zone { 
-            border: 2px dashed #3a3a3c; border-radius: 20px; padding: 50px 20px; 
-            cursor: pointer; transition: 0.4s cubic-bezier(0.2, 0, 0, 1);
-        }
-
-        .drop-zone:hover { border-color: var(--primary); transform: scale(1.02); background: rgba(0,122,255,0.03); }
-
-        .btn-main { 
-            width: 100%; background: #fff; color: #000; padding: 20px; border-radius: 18px; 
-            font-weight: 800; border: none; cursor: pointer; margin-top: 20px; font-size: 16px;
-            transition: 0.3s;
-        }
-
-        .btn-main:hover { transform: translateY(-3px); box-shadow: 0 10px 20px rgba(255,255,255,0.1); }
-        .btn-main:disabled { background: #1c1c1e; color: #444; cursor: not-allowed; }
-
-        #terminal { 
-            background: #000; border: 1px solid #1c1c1e; border-radius: 18px; padding: 20px;
-            margin-top: 30px; font-family: 'Courier New', monospace; font-size: 12px;
-            text-align: left; color: #00ff00; height: 150px; overflow-y: auto;
-        }
-
-        input[type="file"] { display: none; }
-        .loading { display: inline-block; animation: rotation 1s linear infinite; }
-        @keyframes rotation { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-    </style>
+<style>
+body{background:#050505;color:#fff;font-family:system-ui;display:flex;flex-direction:column;align-items:center;padding:50px}
+button{padding:16px 22px;border:none;border-radius:14px;font-weight:700;cursor:pointer;margin-top:10px}
+#log{margin-top:20px;width:420px;height:180px;background:#000;color:#00ff9c;font-family:monospace;font-size:12px;padding:14px;overflow:auto}
+input{display:none}
+</style>
 </head>
+
 <body>
 
-<div class="container">
-    <h1>VEXA</h1>
-    <p style="color: var(--text-dim); letter-spacing: 2px;">ULTIMATE CONVERTER</p>
+<h1>VEXA ENTERPRISE</h1>
 
-    <div class="upload-area">
-        <div class="drop-zone" id="drop-zone">
-            <p id="file-name">Arraste seu PDF ou clique para selecionar</p>
-        </div>
-        <input type="file" id="file-input" accept=".pdf">
-        <button id="convert-btn" class="btn-main" disabled>AGUARDANDO MOTOR...</button>
-    </div>
+<button onclick="file.click()">Selecionar PDF</button>
+<input type="file" id="file" accept=".pdf">
 
-    <div id="terminal">> Inicializando núcleo VEXA...</div>
-</div>
+<button id="run">Converter Agora</button>
+
+<div id="log">> Sistema pronto</div>
 
 <script>
-    const terminal = document.getElementById('terminal');
-    const btn = document.getElementById('convert-btn');
-    const fileInput = document.getElementById('file-input');
-    const dropZone = document.getElementById('drop-zone');
+/* 🔧 WORKER FIX */
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+"https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
 
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+const log = m => {
+    const el = document.getElementById("log");
+    el.innerHTML += `<div>> ${m}</div>`;
+    el.scrollTop = el.scrollHeight;
+};
 
-    const log = (msg) => {
-        terminal.innerHTML += `<div>> ${msg}</div>`;
-        terminal.scrollTop = terminal.scrollHeight;
-    };
+document.getElementById("run").onclick = async () => {
+    const input = document.getElementById("file");
+    if (!input.files[0]) return alert("Selecione um PDF");
 
-    // Verifica se as bibliotecas carregaram
-    const checkInit = setInterval(() => {
-        if (window.docx && window.pdfjsLib) {
-            log("Motores prontos. Pronto para conversão de alto nível.");
-            btn.innerText = "CONVERTER PARA DOCX";
-            btn.disabled = false;
-            clearInterval(checkInit);
-        }
-    }, 1000);
+    try {
+        log("Carregando PDF...");
+        const buffer = await input.files[0].arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
+        log(`PDF com ${pdf.numPages} páginas`);
 
-    dropZone.onclick = () => fileInput.click();
-    fileInput.onchange = () => {
-        if(fileInput.files[0]) document.getElementById('file-name').innerText = fileInput.files[0].name;
-    };
+        /* ✅ DOCX AGORA EXISTE */
+        const { Document, Packer, Paragraph, TextRun } = window.docx;
+        const paragraphs = [];
 
-    btn.onclick = async () => {
-        const file = fileInput.files[0];
-        if (!file) return;
+        for (let i = 1; i <= pdf.numPages; i++) {
+            log(`Página ${i}`);
+            const page = await pdf.getPage(i);
+            const text = await page.getTextContent();
 
-        btn.disabled = true;
-        btn.innerText = "RECONSTRUINDO LAYOUT...";
-        log(`Processando: ${file.name}`);
+            if (text.items.length > 15) {
+                let bufferLine = "";
+                let lastY = null;
 
-        try {
-            const arrayBuffer = await file.arrayBuffer();
-            const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-            const sections = [];
-
-            for (let i = 1; i <= pdf.numPages; i++) {
-                log(`Mapeando página ${i}/${pdf.numPages}...`);
-                const page = await pdf.getPage(i);
-                const textContent = await page.getTextContent();
-                
-                // Estratégia de Reconstrução de Linhas (mantém o layout editável)
-                let lastY;
-                let textRuns = [];
-                let paragraphs = [];
-
-                for (let item of textContent.items) {
-                    if (lastY !== undefined && Math.abs(item.transform[5] - lastY) > 5) {
-                        paragraphs.push(new docx.Paragraph({ children: textRuns }));
-                        textRuns = [];
+                text.items.forEach(it => {
+                    if (lastY && Math.abs(it.transform[5] - lastY) > 12) {
+                        paragraphs.push(new Paragraph({
+                            children:[new TextRun({ text: bufferLine, size:22 })],
+                            spacing:{ after:200 }
+                        }));
+                        bufferLine = "";
                     }
-                    
-                    textRuns.push(new docx.TextRun({
-                        text: item.str + (item.hasEOL ? "" : " "),
-                        size: 22, // ~11pt
-                        font: "Calibri"
+                    bufferLine += it.str + " ";
+                    lastY = it.transform[5];
+                });
+
+                if (bufferLine.trim()) {
+                    paragraphs.push(new Paragraph({
+                        children:[new TextRun({ text: bufferLine, size:22 })]
                     }));
-                    lastY = item.transform[5];
                 }
-                
-                // Adiciona o último parágrafo da página
-                if (textRuns.length > 0) paragraphs.push(new docx.Paragraph({ children: textRuns }));
-                
-                // Adiciona quebra de página se não for a última
-                if (i < pdf.numPages) paragraphs.push(new docx.Paragraph({ children: [new docx.PageBreak()] }));
+            } else {
+                log("OCR ativado");
+                const viewport = page.getViewport({ scale: 2 });
+                const canvas = document.createElement("canvas");
+                const ctx = canvas.getContext("2d");
+                canvas.width = viewport.width;
+                canvas.height = viewport.height;
 
-                sections.push({ children: paragraphs });
+                await page.render({ canvasContext: ctx, viewport }).promise;
+                const ocr = await Tesseract.recognize(canvas, "por");
+
+                ocr.data.paragraphs.forEach(p => {
+                    paragraphs.push(new Paragraph({
+                        children:[new TextRun({ text: p.text, size:22 })],
+                        spacing:{ after:200 }
+                    }));
+                });
             }
-
-            log("Gerando binários DOCX...");
-            const doc = new docx.Document({ sections });
-
-            const blob = await docx.Packer.toBlob(doc);
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = file.name.replace(".pdf", ".docx");
-            document.body.appendChild(a);
-            a.click();
-            
-            log("✨ CONVERSÃO CONCLUÍDA COM SUCESSO!");
-            btn.disabled = false;
-            btn.innerText = "CONVERTER OUTRO PDF";
-
-        } catch (err) {
-            log(`ERRO CRÍTICO: ${err.message}`);
-            btn.disabled = false;
-            btn.innerText = "TENTAR NOVAMENTE";
         }
-    };
+
+        if (!paragraphs.length) throw new Error("Nenhum texto extraído");
+
+        log("Gerando DOCX...");
+        const doc = new Document({ sections:[{ children: paragraphs }] });
+        const blob = await Packer.toBlob(doc);
+
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = input.files[0].name.replace(".pdf",".docx");
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+
+        log("Download iniciado com sucesso");
+
+    } catch (err) {
+        console.error(err);
+        log("ERRO: " + err.message);
+    }
+};
 </script>
+
 </body>
 </html>
